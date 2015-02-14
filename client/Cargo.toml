@@ -1,0 +1,9 @@
+[package]
+
+name = "client"
+version = "0.0.1"
+authors = ["Adolfo Ochagavía <aochagavia92@gmail.com>"]
+
+[dependencies.shared]
+
+path = "../shared"
