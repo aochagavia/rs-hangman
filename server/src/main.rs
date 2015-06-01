@@ -1,12 +1,12 @@
-#![feature(io, net, std_misc)]
-
 extern crate rand;
 extern crate shared;
+
 mod server_game;
 
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::thread::Thread;
+use std::str;
+use std::thread;
 
 use rand::Rng;
 use server_game::ServerGame;
@@ -20,7 +20,7 @@ fn main() {
     println!("Server listening on {}", ADDR);
 
     for stream in listener.incoming() {
-        Thread::spawn(move || {
+        thread::spawn(move || {
             handle_client(stream.unwrap());
             println!("Player logged out");
         });
@@ -31,7 +31,7 @@ fn handle_client(mut stream: TcpStream) {
     let word = rand::thread_rng().choose(WORDS).unwrap();
     let mut game = <Game as ServerGame>::new(word);
     println!("Player logged in. Assigned word '{}'", word);
-
+    
     // Send word length
     stream.write(&[game.word.len() as u8]).unwrap();
 
@@ -40,8 +40,10 @@ fn handle_client(mut stream: TcpStream) {
     let mut buffer = [0u8; 16];
     while let GameState::Playing = game.state() {
         let read_bytes = stream.read(&mut buffer).unwrap();
-        let char_ = String::from_utf8(buffer[..read_bytes].to_vec()).unwrap().chars()
-                                                                    .next().unwrap();
+        let read_str = str::from_utf8(&buffer[..read_bytes]).unwrap();
+        let char_ = read_str.chars().next().unwrap();
+        
+        println!("received data: {}", read_str);
 
         let indices = game.guess(char_);
         if indices.len() > 0 {
