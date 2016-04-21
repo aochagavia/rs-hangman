@@ -1,0 +1,3 @@
+message WordLength {
+  required uint32 length = 1;
+}

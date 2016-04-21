@@ -1,0 +1,4 @@
+message GuessResult {
+    required bool correct = 1;
+    required bytes indices = 2;
+}

@@ -12,7 +12,7 @@ impl ClientGame for Game {
             lives: 5
         }
     }
-    
+
     fn show_chars(&mut self, char_: char, positions: &[u8]) {
         for &i in positions {
             self.word[i as usize].char_ = char_;

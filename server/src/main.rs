@@ -3,14 +3,16 @@ extern crate shared;
 
 mod server_game;
 
-use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::thread;
 
 use rand::Rng;
 use server_game::ServerGame;
-use shared::{GameState, Game};
+use shared::{GameState, Game, read_message, send_message};
+use shared::guess::Guess;
+use shared::guess_result::GuessResult;
+use shared::word_length::WordLength;
 
 const ADDR: &'static str = "127.0.0.1:8181";
 const WORDS: &'static [&'static str] = &["rustacean", "safety", "concurrency", "speed"];
@@ -31,25 +33,26 @@ fn handle_client(mut stream: TcpStream) {
     let word = rand::thread_rng().choose(WORDS).unwrap();
     let mut game = <Game as ServerGame>::new(word);
     println!("Player logged in. Assigned word '{}'", word);
-    
+
     // Send word length
-    stream.write(&[game.word.len() as u8]).unwrap();
+    let mut length = WordLength::new();
+    length.set_length(game.word.len() as u32);
+    send_message(length, &mut stream);
 
     // Receive the guesses of the player
-    // It will always be a character, so 16 bytes is more than enough
-    let mut buffer = [0u8; 16];
     while let GameState::Playing = game.state() {
-        let read_bytes = stream.read(&mut buffer).unwrap();
-        let read_str = str::from_utf8(&buffer[..read_bytes]).unwrap();
-        let char_ = read_str.chars().next().unwrap();
-        
-        println!("received data: {}", read_str);
+        let guess: Guess = read_message(&mut stream).unwrap();
+        let char_ = guess.get_character().chars().next().unwrap();
 
         let indices = game.guess(char_);
+        let mut result = GuessResult::new();
         if indices.len() > 0 {
-            stream.write(&indices).unwrap();
+            result.set_correct(true);
+            result.set_indices(indices);
         } else {
-            stream.write(&[255]).unwrap();
+            result.set_correct(false);
+            result.set_indices(Vec::new());
         }
+        send_message(result, &mut stream);
     }
 }

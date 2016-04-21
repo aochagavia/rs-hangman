@@ -5,4 +5,4 @@ version = "0.0.1"
 authors = ["Adolfo Ochagavía <aochagavia92@gmail.com>"]
 
 [dependencies]
-capnp = "*"
+protobuf = "1.0.18"

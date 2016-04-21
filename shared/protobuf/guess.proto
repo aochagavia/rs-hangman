@@ -1,0 +1,3 @@
+message Guess {
+  required string character = 1;
+}

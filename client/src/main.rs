@@ -1,11 +1,14 @@
 extern crate shared;
 mod client_game;
 
-use std::io::{self, Read, Write};
+use std::io;
 use std::net::TcpStream;
 
 use client_game::ClientGame;
-use shared::{GameState, Game};
+use shared::{GameState, Game, read_message, send_message};
+use shared::guess::Guess;
+use shared::guess_result::GuessResult;
+use shared::word_length::WordLength;
 
 const ADDR: &'static str = "127.0.0.1:8181";
 
@@ -14,13 +17,12 @@ fn main() {
     let mut stream = TcpStream::connect(ADDR).unwrap();
 
     // Connection established, retrieve word length
-    let buffer = &mut [0u8; 255];
-    assert_eq!(stream.read(buffer).ok(), Some(1));
-    let mut game = <Game as ClientGame>::new(buffer[0]);
+    let length: WordLength = read_message(&mut stream).unwrap();
+    let mut game = <Game as ClientGame>::new(length.get_length() as u8);
 
     // The game loop
     let mut line_buffer = String::new();
-    let mut reader = io::stdin();
+    let reader = io::stdin();
     loop {
         match game.state() {
             GameState::Victory => {
@@ -41,17 +43,17 @@ fn main() {
         // Read next char and send it
         line_buffer.clear();
         reader.read_line(&mut line_buffer).unwrap();
-        let bytes: Vec<_> = line_buffer.trim_right().bytes().take(16).collect();
-        stream.write(&bytes).unwrap();
+        let letter = line_buffer.chars().next().unwrap();
+        let mut guess = Guess::new();
+        guess.set_character(letter.to_string());
+        send_message(guess, &mut stream);
 
-        // The server will send a list of indices or one 255 character
-        let length = stream.read(buffer).unwrap();
-        if buffer[0] == 255 {
-            println!("Received only one number");
+        let result: GuessResult = read_message(&mut stream).unwrap();
+        if !result.get_correct() {
+            println!("Incorrect guess!");
             game.lives -= 1;
         } else {
-            println!("received data: {:?}", &buffer[..length]);
-            game.show_chars(line_buffer.chars().next().unwrap(), &buffer[..length]);
+            game.show_chars(letter, result.get_indices());
         }
 
     }
